@@ -1,0 +1,115 @@
+#include "UnityRayQuery.cginc"
+
+#pragma kernel CSMain
+
+#pragma require inlineraytracing
+
+// Inputs
+RaytracingAccelerationStructure     g_AccelStruct;
+
+uint                                g_FrameIndex;
+uint                                g_TemporalAccumulationStep;
+float                               g_ShadowSpread;
+float3                              g_LightDir;
+float4x4                            g_LightMatrix;
+float4                              g_DepthToViewParams;
+
+// Unity built-ins (assuming we are using Deferred Rendering Path)
+Texture2D<float>                    _CameraDepthTexture;
+Texture2D<float4>                   _CameraGBufferTexture2;
+float4                              _ZBufferParams;
+float4x4                            unity_CameraToWorld;
+
+// Output
+RWTexture2D<float>                  g_Output;
+
+// Random function.
+uint WangHash(inout uint seed)
+{
+    seed = (seed ^ 61) ^ (seed >> 16);
+    seed *= 9;
+    seed = seed ^ (seed >> 4);
+    seed *= 0x27d4eb2d;
+    seed = seed ^ (seed >> 15);
+    return seed;
+}
+
+float RandomFloat01(inout uint seed)
+{
+    return float(WangHash(seed)) / float(0xFFFFFFFF);
+}
+
+float LinearEyeDepth(float depth, float4 zBufferParam)
+{
+    return 1.0 / (zBufferParam.z * depth + zBufferParam.w);
+}
+
+float3 GetPositionViewSpace(float2 positionSS, float depth)
+{
+    float linearDepth = LinearEyeDepth(depth, _ZBufferParams);
+    return float3((positionSS * g_DepthToViewParams.xy - g_DepthToViewParams.zw) * linearDepth, linearDepth);
+}
+
+[numthreads(8, 4, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    // The Sky cannot be in shadow :)
+    float rawDepth = _CameraDepthTexture[id.xy];
+    if (rawDepth == 0)
+    {
+        g_Output[id.xy] = 1;
+        return;
+    }    
+
+    // Do not shade back facing triangles relative to light direction.
+    float3 worldNormal = normalize(_CameraGBufferTexture2[id.xy].rgb * 2 - 1);
+    if (dot(g_LightDir, worldNormal) >= -0.05f)
+    {
+        g_Output[id.xy] = 1;
+        return;
+    }
+    
+    // Sample the depth texture in the middle of the texel.
+    float2 frameCoord = float2(id.xy) + float2(0.5, 0.5);
+
+    // Generate world space position from _CameraDepthTexture.
+    float3 viewSpacePos = GetPositionViewSpace(frameCoord, rawDepth);
+    float3 worldSpacePos = mul(unity_CameraToWorld, float4(viewSpacePos, 1)).xyz;
+
+    uint rngState = uint(uint(id.x) * uint(1973) + uint(id.y) * uint(9277) + uint(g_FrameIndex) * uint(26699)) | uint(1);
+
+    // Shoot shadow rays!
+    RayDesc shadowRay;
+    shadowRay.Origin = worldSpacePos + worldNormal * 0.01f;
+    shadowRay.TMin = 0;
+    shadowRay.TMax = 1e17f;
+
+    UnityRayQuery<RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> shadowQuery;
+
+    // Generate more samples if the shadow map was just reset to reach faster to denoised shadows.
+    const uint sampleCount = g_TemporalAccumulationStep < 10 ? 8 : 2;
+
+    // A value of 0 means that the pixel is not in shadow.
+    float shadow = 0;
+
+    for (uint i = 0; i < sampleCount; i++)
+    {
+        float3 localDir = normalize(float3(g_ShadowSpread, g_ShadowSpread, 1) * float3(2 * RandomFloat01(rngState) - 1, 2 * RandomFloat01(rngState) - 1, 1));
+                       
+        shadowRay.Direction = mul(g_LightMatrix, localDir);
+
+        // Assume everything is opaque. Cutout materials are not suppoted when using inline ray tracing.
+        shadowQuery.TraceRayInline(g_AccelStruct, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xff, shadowRay);
+
+        shadowQuery.Proceed();
+
+        shadow += shadowQuery.CommittedStatus() == COMMITTED_TRIANGLE_HIT;
+    }
+    
+    float prevShadow = g_Output[id.xy];
+
+    // Accumulate new samples into the previous frame's shadow map.
+    float result = lerp(prevShadow, 1 - (shadow / sampleCount), 1 / float(g_TemporalAccumulationStep + 1));    
+
+    g_Output[id.xy] = result;
+}
