@@ -13,6 +13,8 @@ Limitations:
 - the shadow is currently generated on top of everything else so the regular shadows must be disabled from the Light settings.
 - the effect works only in Game view.
 
+Examples using variying penumbra based on distance to shadow caster and spread options.
+
 <img src="Images/1.jpg" width="1280">
 <img src="Images/2.jpg" width="1280">
 <img src="Images/3.jpg" width="1280">
