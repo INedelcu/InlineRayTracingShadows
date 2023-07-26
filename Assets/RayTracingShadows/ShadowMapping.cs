@@ -134,16 +134,16 @@ public class ShadowMapping : MonoBehaviour
 
         cullingConfig.subMeshFlagsConfig.opaqueMaterials = RayTracingSubMeshFlags.Enabled | RayTracingSubMeshFlags.ClosestHitOnly;
         cullingConfig.subMeshFlagsConfig.transparentMaterials = RayTracingSubMeshFlags.Disabled;
-        cullingConfig.subMeshFlagsConfig.alphaTestedMaterials = RayTracingSubMeshFlags.Disabled;        
+        cullingConfig.subMeshFlagsConfig.alphaTestedMaterials = RayTracingSubMeshFlags.Disabled;
 
         List<RayTracingInstanceCullingTest> instanceTests = new List<RayTracingInstanceCullingTest>();
 
         RayTracingInstanceCullingTest instanceTest = new RayTracingInstanceCullingTest();
         instanceTest.allowOpaqueMaterials = true;
+        instanceTest.allowAlphaTestedMaterials = true;
         instanceTest.allowTransparentMaterials = false;
-        instanceTest.allowAlphaTestedMaterials = false;
         instanceTest.layerMask = -1;
-        instanceTest.shadowCastingModeMask = (1 << (int)ShadowCastingMode.Off) | (1 << (int)ShadowCastingMode.On) | (1 << (int)ShadowCastingMode.TwoSided);
+        instanceTest.shadowCastingModeMask = (1 << (int)ShadowCastingMode.On) | (1 << (int)ShadowCastingMode.TwoSided);
         instanceTest.instanceMask = 1 << 0;
 
         instanceTests.Add(instanceTest);
@@ -188,8 +188,8 @@ public class ShadowMapping : MonoBehaviour
         if (prevCameraMatrix != cam.cameraToWorldMatrix ||
             prevProjMatrix != cam.projectionMatrix ||
             prevLightMatrix != dirLight.transform.localToWorldMatrix || 
-            cullingResults.transformsChanged  ||
-            prevShadowSpread != shadowSpread)
+            prevShadowSpread != shadowSpread ||
+            cullingResults.transformsChanged)
         {
             temporalAccumulationStep = 0;
         }
@@ -204,7 +204,7 @@ public class ShadowMapping : MonoBehaviour
 
         Matrix4x4 lightMatrix = dirLight.transform.localToWorldMatrix;
         lightMatrix.SetColumn(2, -lightMatrix.GetColumn(2));
-        cmdBufferDirLight.SetComputeMatrixParam(shadowMappingCS, "g_LightMatrix", lightMatrix);//dirLight.transform.localToWorldMatrix);
+        cmdBufferDirLight.SetComputeMatrixParam(shadowMappingCS, "g_LightMatrix", lightMatrix);
 
         cmdBufferDirLight.DispatchCompute(shadowMappingCS, kernelIndex, (int)((cam.pixelWidth + threadGroupSizeX + 1) / threadGroupSizeX),(int)((cam.pixelHeight + threadGroupSizeY + 1) / threadGroupSizeY), 1);
 

@@ -55,6 +55,12 @@ float3 GetPositionViewSpace(float2 positionSS, float depth)
 [numthreads(8, 4, 1)]
 void CSMain(uint3 id : SV_DispatchThreadID)
 {
+    uint width, height;
+    _CameraDepthTexture.GetDimensions(width, height);
+
+    if (id.x >= width || id.y >= height)
+        return;
+
     // The Sky cannot be in shadow :)
     float rawDepth = _CameraDepthTexture[id.xy];
     if (rawDepth == 0)
@@ -84,7 +90,7 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     RayDesc shadowRay;
     shadowRay.Origin = worldSpacePos + worldNormal * 0.01f;
     shadowRay.TMin = 0;
-    shadowRay.TMax = 1e17f;
+    shadowRay.TMax = 1e20f;
 
     UnityRayQuery<RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_CULL_BACK_FACING_TRIANGLES> shadowQuery;
 
