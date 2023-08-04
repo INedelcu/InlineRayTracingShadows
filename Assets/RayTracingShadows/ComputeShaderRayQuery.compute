@@ -92,7 +92,7 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     shadowRay.TMin = 0;
     shadowRay.TMax = 1e20f;
 
-    UnityRayQuery<RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_CULL_BACK_FACING_TRIANGLES> shadowQuery;
+    UnityRayQuery<RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> shadowQuery;
 
     // Generate more samples if the shadow map was just reset to reach faster to denoised shadows.
     const uint sampleCount = g_TemporalAccumulationStep < 10 ? 8 : 2;
@@ -107,7 +107,7 @@ void CSMain(uint3 id : SV_DispatchThreadID)
         shadowRay.Direction = mul(g_LightMatrix, localDir);
 
         // Assume everything is opaque. Cutout materials are not suppoted when using inline ray tracing.
-        shadowQuery.TraceRayInline(g_AccelStruct, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xff, shadowRay);
+        shadowQuery.TraceRayInline(g_AccelStruct, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xff, shadowRay);
 
         shadowQuery.Proceed();
 

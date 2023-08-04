@@ -321,6 +321,7 @@ QualitySettings:
   m_TextureMipmapLimitGroupNames: []
   m_PerPlatformDefaultQuality:
     Android: 2
+    GameCoreScarlett: 5
     Lumin: 5
     Nintendo Switch: 5
     PS4: 5
