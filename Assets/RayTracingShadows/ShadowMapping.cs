@@ -132,6 +132,11 @@ public class ShadowMapping : MonoBehaviour
 
         cullingConfig.flags = RayTracingInstanceCullingFlags.EnableLODCulling;
 
+        cullingConfig.lodParameters.fieldOfView = cam.fieldOfView;
+        cullingConfig.lodParameters.cameraPixelHeight = cam.pixelHeight;
+        cullingConfig.lodParameters.isOrthographic = false;
+        cullingConfig.lodParameters.cameraPosition = cam.transform.position;
+
         cullingConfig.subMeshFlagsConfig.opaqueMaterials = RayTracingSubMeshFlags.Enabled | RayTracingSubMeshFlags.ClosestHitOnly;
         cullingConfig.subMeshFlagsConfig.transparentMaterials = RayTracingSubMeshFlags.Disabled;
         cullingConfig.subMeshFlagsConfig.alphaTestedMaterials = RayTracingSubMeshFlags.Disabled;
