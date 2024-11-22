@@ -10,7 +10,7 @@ https://docs.google.com/document/d/1uRoUbW4m6Y_Bo7uCRUKwEhbKVTu5MKvto-Pm89DYXoY/
 - [SystemInfo.supportsInlineRayTracing](https://docs.unity3d.com/2023.2/Documentation/ScriptReference/SystemInfo-supportsInlineRayTracing.html) must be true.
 
 # Effect Description
-The  [compute shader](Assets/RayTracingShadows/ComputeShaderRayQuery.compute) reads the depth value from [_CameraDepthTexture](https://docs.unity3d.com/Manual/SL-CameraDepthTexture.html) built-in texture. The world space position for a particular pixel is generated and from that point a number of rays are cast along the light direction with some random offsets for generating variable penumbra based on the distance from the shadow caster.
+The shadow texture is generated in screen space and blit directly on top of the rendered scene. To generate the screen space shadows texture, a [compute shader](Assets/RayTracingShadows/ComputeShaderRayQuery.compute) reads the depth value from [_CameraDepthTexture](https://docs.unity3d.com/Manual/SL-CameraDepthTexture.html) built-in texture. The world space position for a particular pixel is generated and from that point a number of rays are cast along the light direction with some random offsets for generating variable penumbra based on the distance from the shadow caster.
 
 The world normal is read from the GBuffer _CameraGBufferTexture2 and is used to avoid generating shadows for surfaces that have the same orientation as the directional light.
 
